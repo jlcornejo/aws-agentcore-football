@@ -32,7 +32,7 @@ Workshop de 4 horas de AWS donde construyes un equipo de 5 agentes IA que juegan
 | Duración del partido | ~5 minutos (120-150 ticks) |
 | Frecuencia de decisión | ~1 cada 2 segundos |
 | Timeout por decisión | 5 segundos máximo |
-| Timeout de riesgo real | ~900ms (según experiencia del equipo chino) |
+| Timeout de riesgo real | ~900ms (según experiencia de torneos previos) |
 | Invocaciones por partido | 300-600 por equipo |
 | Coordenadas campo | x: -55 a +55, y: -35 a +35 |
 | HOME ataca hacia | +x |
@@ -85,7 +85,7 @@ Cada agente es **independiente**: tiene su propio prompt, su propio modelo, su p
 
 ## Modelos Recomendados
 
-Del repo oficial y la experiencia del equipo chino:
+Del repo oficial y experiencia de torneos previos:
 
 | Posición | Modelo recomendado | Razón |
 |----------|-------------------|-------|
@@ -95,7 +95,7 @@ Del repo oficial y la experiencia del equipo chino:
 | FWD1 | Nova Micro o Nova 2 Lite | Decisiones de gol rápidas |
 | FWD2 | Nova Lite | Balance velocidad/inteligencia |
 
-**El equipo chino usó**: FWD/MID en `nova-2-lite` (mejor razonamiento atacante), DEF/GK en `nova-micro` (baja latencia defensiva).
+**Configuración probada en torneos**: FWD/MID en `nova-2-lite` (mejor razonamiento atacante), DEF/GK en `nova-micro` (baja latencia defensiva).
 
 **Dato clave**: en una de sus victorias 3-2, promediaron 1049ms de latencia vs 550ms del rival — ganaron con táctica, no con velocidad. Pero latencia alta es un riesgo que reduce el margen.
 
@@ -276,8 +276,8 @@ Cada iteración debería tomar ~3 minutos (1 min edit, 1 min deploy, 1 min test)
 - [Workshop oficial](https://catalog.workshops.aws/agentic-football/en-US)
 - [Repo oficial AWS](https://github.com/aws-samples/sample-ai-possibilities/tree/main/agentic-football-sample-agents)
 - [Blog técnico Strands](https://strandsagents.com/blog/inside-agentic-football-cup/)
-- [72 Hours de Agentic Football (equipo chino)](https://medium.com/@shi.pan218/72-hours-of-agentic-football-from-aws-agentcore-harness-to-a-full-observability-toolchain-c57ca58abb8b)
-- [Repo del equipo chino](https://github.com/peterpanstechland/sample-ai-possibilities/tree/football-workshop/agentic-football-sample-agents)
+- [72 Hours of Agentic Football (community pre-test)](https://medium.com/@shi.pan218/72-hours-of-agentic-football-from-aws-agentcore-harness-to-a-full-observability-toolchain-c57ca58abb8b)
+- [Repo community pre-test](https://github.com/peterpanstechland/sample-ai-possibilities/tree/football-workshop/agentic-football-sample-agents)
 - [agenticfootballcup.com](https://agenticfootballcup.com/)
 - [Strands Agents SDK](https://strandsagents.com/)
 - [Amazon Bedrock AgentCore](https://docs.aws.amazon.com/bedrock-agentcore/)
