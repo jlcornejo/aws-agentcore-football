@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.kiro/
+
+# AWS
+.aws/
+*.pem
+
+# AgentCore
+.bedrock_agentcore/
+agentcore/.cli/
+_build/
+
+# Reference repos (not our code)
+_official_reference/
+_chinese_team/
+
+# Misc
+.DS_Store
+*.log
+sessions/
