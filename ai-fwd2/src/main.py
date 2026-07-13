@@ -72,7 +72,7 @@ fallback_commands = build_fallback(FWD2_CONFIG)
 
 # --- Wire it up ---
 
-agent = create_agent(SYSTEM_PROMPT, model_id="us.amazon.nova-2-lite-v1:0")
+agent = create_agent(SYSTEM_PROMPT, model_id="us.amazon.nova-2-lite-v1:0", position_label=POSITION_LABEL)
 create_invoke_handler(
     app, agent, MY_PLAYER_ID, POSITION_LABEL, fallback_commands,
     fallback_cfg=FWD2_CONFIG,

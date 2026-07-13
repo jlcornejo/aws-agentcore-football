@@ -9,12 +9,33 @@ from parsing import parse_commands
 from state import summarize_state, get_goal_positions
 from fallback import FallbackConfig, build_last_resort
 from prompt_manager import PromptCache, get_prompt_id_for_position
+from memory import create_memory_session_manager
 
 
-def create_agent(system_prompt: str, model_id: str = "us.amazon.nova-micro-v1:0") -> Agent:
-    """Create a Strands Agent with the given system prompt."""
+def create_agent(
+    system_prompt: str,
+    model_id: str = "us.amazon.nova-micro-v1:0",
+    position_label: Optional[str] = None,
+    session_id: Optional[str] = None,
+) -> Agent:
+    """Create a Strands Agent with the given system prompt.
+
+    If MEMORY_ENABLED=true and MEMORY_ID is configured, the agent will
+    use AgentCore Memory via a session_manager for short-term recall
+    between ticks (opponent patterns, coaching instructions, etc.).
+    """
     model = BedrockModel(model_id=model_id)
-    return Agent(model=model, system_prompt=system_prompt)
+
+    # Attempt to attach memory session manager
+    session_manager = None
+    if position_label:
+        session_manager = create_memory_session_manager(position_label, session_id)
+
+    kwargs = {"model": model, "system_prompt": system_prompt}
+    if session_manager:
+        kwargs["session_manager"] = session_manager
+
+    return Agent(**kwargs)
 
 
 def _fix_own_goal_move(commands: list[dict], team_id: int, position_label: str, log) -> list[dict]:

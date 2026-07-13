@@ -106,9 +106,11 @@ for AGENT in "${AGENTS[@]}"; do
   cp "$AGENT_SRC/requirements.txt" "$STAGE/requirements.txt"
 
   # Generate .bedrock_agentcore.yaml from template
+  MEMORY_MODE="${MEMORY_MODE:-NO_MEMORY}"
   sed \
     -e "s|\${AWS_ACCOUNT_ID}|$AWS_ACCOUNT_ID|g" \
     -e "s|\${AWS_DEFAULT_REGION}|$AWS_DEFAULT_REGION|g" \
+    -e "s|\${MEMORY_MODE:-NO_MEMORY}|$MEMORY_MODE|g" \
     "$AGENT_SRC/.bedrock_agentcore.yaml.template" > "$STAGE/.bedrock_agentcore.yaml"
 
   # Deploy
