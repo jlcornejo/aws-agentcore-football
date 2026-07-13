@@ -27,6 +27,7 @@ def create_agent(
     model_id: str = "us.amazon.nova-micro-v1:0",
     position_label: Optional[str] = None,
     session_id: Optional[str] = None,
+    tools: Optional[list] = None,
 ) -> Agent:
     """Create a Strands Agent with the given system prompt.
 
@@ -36,6 +37,8 @@ def create_agent(
 
     If GUARDRAIL_ID is set, attaches a Bedrock Guardrail to the model
     for content filtering on input/output.
+
+    If tools is provided, attaches them as available tools for the agent.
     """
     model_kwargs = {"model_id": model_id}
 
@@ -55,6 +58,8 @@ def create_agent(
     kwargs = {"model": model, "system_prompt": system_prompt}
     if session_manager:
         kwargs["session_manager"] = session_manager
+    if tools:
+        kwargs["tools"] = tools
 
     return Agent(**kwargs)
 

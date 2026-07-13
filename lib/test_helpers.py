@@ -105,6 +105,20 @@ def mock_agentcore_gateway():
     """
     mock_agentcore()
 
+    # Mock Code Interpreter module
+    ci_mod = type(sys)("bedrock_agentcore.tools")
+    ci_client_mod = type(sys)("bedrock_agentcore.tools.code_interpreter_client")
+
+    class _FakeCodeInterpreter:
+        def __init__(self, *a, **kw): pass
+        def start(self): pass
+        def stop(self): pass
+        def invoke(self, *a, **kw): return {"stream": []}
+
+    ci_client_mod.CodeInterpreter = _FakeCodeInterpreter
+    sys.modules["bedrock_agentcore.tools"] = ci_mod
+    sys.modules["bedrock_agentcore.tools.code_interpreter_client"] = ci_client_mod
+
     # Mock MCP client modules (always needed — mcp may not be installed)
     if "mcp" not in sys.modules:
         mcp_mod = type(sys)("mcp")
