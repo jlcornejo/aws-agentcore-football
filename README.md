@@ -117,6 +117,34 @@ python simulate.py --llm
 
 ## Editar la Táctica
 
+### Opción A — Prompt Manager (sin re-deploy, ~5 segundos) ⚡
+
+Los prompts se cargan dinámicamente desde **Bedrock Prompt Management**.
+Para cambiar la táctica en vivo:
+
+```bash
+# 1. Edita el SYSTEM_PROMPT localmente
+vim ai-def/src/main.py
+
+# 2. Sync a Bedrock (NO necesita deploy)
+./update-prompt.sh ai-def
+
+# ¡Listo! El agente lo carga en la siguiente invocación (max ~60s)
+```
+
+O directamente desde la **consola de Bedrock** → Prompt Management → edita el prompt.
+
+**Setup inicial (una vez después del primer deploy):**
+```bash
+# Sync todos los prompts a Bedrock
+python sync-prompts.py
+
+# Te dará los PROMPT_ID para cada agente. Agrégalos como env vars:
+# PROMPT_ID_GK=xxx  PROMPT_ID_DEF=xxx  etc.
+```
+
+### Opción B — Deploy completo (cuando cambias código, ~5 min)
+
 Para cambiar el comportamiento de cualquier agente:
 1. Abre `ai-<posicion>/src/main.py`
 2. Edita el `SYSTEM_PROMPT` — especialmente la tabla **"Dynamic Positioning"**

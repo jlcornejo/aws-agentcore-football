@@ -1,13 +1,14 @@
 """Base agent factory for AI soccer position agents."""
 
 import json
-from typing import Callable
+from typing import Callable, Optional
 from strands import Agent
 from strands.models import BedrockModel
 
 from parsing import parse_commands
 from state import summarize_state
 from fallback import FallbackConfig, build_last_resort
+from prompt_manager import PromptCache, get_prompt_id_for_position
 
 
 def create_agent(system_prompt: str, model_id: str = "us.amazon.nova-micro-v1:0") -> Agent:
@@ -30,13 +31,34 @@ def create_invoke_handler(
       1. LLM response → parse into commands
       2. fallback_fn(game_state, team_id, my_player_id) → rule-based commands
       3. last-resort command from fallback_cfg → single safe command
+
+    Dynamic prompt:
+      If PROMPT_ID_<POSITION> or PROMPT_ID env var is set, the agent's
+      system_prompt is refreshed from Bedrock Prompt Management on a TTL basis.
+      This allows updating tactics without redeploying.
     """
     log = app.logger
     last_resort = build_last_resort(fallback_cfg, my_player_id)
 
+    # --- Dynamic prompt setup ---
+    prompt_id = get_prompt_id_for_position(position_label)
+    prompt_cache: Optional[PromptCache] = None
+    if prompt_id:
+        current_prompt = agent.system_prompt if hasattr(agent, 'system_prompt') else ""
+        prompt_cache = PromptCache(prompt_id, fallback_prompt=current_prompt)
+        log.info(f"{position_label}: Dynamic prompts ENABLED (id={prompt_id})")
+    else:
+        log.info(f"{position_label}: Using static prompt (no PROMPT_ID env var)")
+
     @app.entrypoint
     async def invoke(payload, context):
         try:
+            # Refresh prompt if dynamic prompts are enabled
+            if prompt_cache:
+                new_prompt = prompt_cache.get_prompt()
+                if hasattr(agent, 'system_prompt'):
+                    agent.system_prompt = new_prompt
+
             prompt = payload.get("prompt", "{}")
             prompt_data = json.loads(prompt) if isinstance(prompt, str) else prompt
 
