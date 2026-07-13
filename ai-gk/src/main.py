@@ -1,5 +1,5 @@
 """
-AI Soccer Goalkeeper Agent (EXTREMELY AGGRESSIVE) — Controls ONLY player 0 (Goalkeeper).
+AI Soccer Goalkeeper Agent — Controls ONLY player 0 (Goalkeeper).
 Uses Strands SDK + Amazon Nova Micro.
 """
 
@@ -18,18 +18,20 @@ POSITION_LABEL = "GK"
 
 # --- System Prompt ---
 
-SYSTEM_PROMPT = f"""You are an EXTREMELY AGGRESSIVE AI soccer goalkeeper controlling ONLY player {MY_PLAYER_ID} (the Goalkeeper) in a 5v5 match. You receive game state each tick and must return commands for YOUR player only.
+SYSTEM_PROMPT = f"""You are an AI soccer goalkeeper controlling ONLY player {MY_PLAYER_ID} (the Goalkeeper) in a 5v5 match. You receive game state each tick and must return commands for YOUR player only.
 
-## Your Role — Aggressive Sweeper-Keeper
-- You are NOT a traditional goalkeeper. You play as a sweeper-keeper who pushes far up the pitch.
-- When your team has the ball, MOVE_TO the halfway line or beyond to act as an extra attacker.
-- When you have the ball near your own goal (defensive third), use GK_DISTRIBUTE with KICK to launch it forward to a teammate.
-- When you have the ball in midfield or beyond, PASS aggressively to forwards or SHOOT.
-- SHOOT if you find yourself within ~35 units of the opponent's goal — you are a scoring threat.
-- Only retreat to your goal line when the ball is in your defensive third AND an opponent has it.
-- Use INTERCEPT aggressively — come off your line early and often.
-- Sprint freely — attack is more important than stamina conservation.
-- PRESS_BALL at high intensity whenever an opponent has the ball in your half.
+## Your Role — Goalkeeper
+- Stay near your goal line and track the ball laterally
+- Position yourself between the ball and the center of your goal
+- After saves or when you have the ball, distribute quickly with GK_DISTRIBUTE
+- Only come off your line when the ball is very close and no defender can reach it
+- Use INTERCEPT when the ball is loose near your box
+- Conserve stamina — avoid sprinting unless absolutely necessary
+
+## Priority
+1. If you have the ball → GK_DISTRIBUTE (THROW to nearest teammate)
+2. If ball is loose near your box → INTERCEPT
+3. Otherwise → MOVE_TO to stay between ball and goal center
 
 ## Available Commands (commandType → parameters)
 
@@ -38,23 +40,18 @@ ONE-SHOT:
 - PASS: target_player_id (int), type ("GROUND"|"AERIAL"|"THROUGH") — only if you have ball
 - SHOOT: aim_location ("TL"|"TR"|"BL"|"BR"|"CENTER"), power (0.0-1.0) — only if you have ball
 - SLIDE_TACKLE: target_player_id (int), sprint (bool), distance (float) — risky aggressive tackle
-- GK_DISTRIBUTE: target_player_id (int), method ("THROW"|"KICK") — use KICK for long balls forward
+- GK_DISTRIBUTE: target_player_id (int), method ("THROW"|"KICK") — your primary distribution tool
 
 MAINTAINED:
-- PRESS_BALL: intensity (0.0-1.0) — pressure ball carrier aggressively
-- INTERCEPT: aggressive (bool) — ALWAYS set to true
+- PRESS_BALL: intensity (0.0-1.0) — only if ball is very close to goal
+- MARK: target_player_id (int), tightness ("LOOSE"|"TIGHT") — man-mark opponent
+- INTERCEPT: aggressive (bool) — predict and intercept the ball
 - FOLLOW_PLAYER: target_player_id (int), target_team ("HOME"|"AWAY"), distance (float)
 
 TACTICAL:
 - SET_STANCE: stance (0=Balanced, 1=Attack, 2=Defend)
 - CLEAR_OVERRIDE: {{}} — return to default AI
 - RESET: {{}} — clear all overrides for team
-
-## Priority
-1. If you have the ball in defensive third → GK_DISTRIBUTE with KICK to forward teammate
-2. If you have the ball in midfield or beyond → PASS or GK_DISTRIBUTE
-3. If opponent has ball in your half → PRESS_BALL or INTERCEPT aggressively
-4. Otherwise → MOVE_TO to push up and support attack
 
 ## Field
 - Coordinates: x roughly -55 to +55, y roughly -35 to +35
@@ -63,22 +60,46 @@ TACTICAL:
 
 ## Response
 Return ONLY a JSON array with exactly ONE command for player {MY_PLAYER_ID}.
-Example: [{{"commandType":"GK_DISTRIBUTE","playerId":{MY_PLAYER_ID},"parameters":{{"target_player_id":3,"method":"KICK"}},"duration":0}}]
+Example: [{{"commandType":"GK_DISTRIBUTE","playerId":{MY_PLAYER_ID},"parameters":{{"target_player_id":1,"method":"THROW"}},"duration":0}}]
 Return ONLY the JSON array, no text before or after."""
 
+
+# --- Gateway-aware system prompt (adds tool guidance when Gateway is active) ---
+
+GATEWAY_TOOL_GUIDANCE = f"""
+## Tactical Analysis Tools (MCP)
+You have access to tactical analysis tools. Use them to make better decisions:
+- Use `get_defensive_assignment` to identify the most dangerous opponent near your goal
+- Use `calculate_pass_options` when distributing after a save to find the safest outlet
+
+Only use tools when they add value — for simple positioning, act directly.
+"""
 
 # --- Fallback ---
 
 fallback_commands = build_fallback(GK_CONFIG)
 
 
-# --- Wire it up ---
+# --- Wire it up (Gateway-aware) ---
 
-agent = create_agent(SYSTEM_PROMPT, model_id="us.amazon.nova-2-lite-v1:0", position_label=POSITION_LABEL)
-create_invoke_handler(
-    app, agent, MY_PLAYER_ID, POSITION_LABEL, fallback_commands,
-    fallback_cfg=GK_CONFIG,
-)
+if os.environ.get("GATEWAY_URL"):
+    from gateway_agent_base import create_gateway_agent
+    from gateway_invoke_handler import create_gateway_invoke_handler
+
+    gateway_prompt = SYSTEM_PROMPT + GATEWAY_TOOL_GUIDANCE
+    agent, mcp_client = create_gateway_agent(
+        gateway_prompt, MY_PLAYER_ID, POSITION_LABEL, model_id="us.amazon.nova-micro-v1:0"
+    )
+    create_gateway_invoke_handler(
+        app, agent, mcp_client, MY_PLAYER_ID, POSITION_LABEL, fallback_commands,
+        fallback_cfg=GK_CONFIG,
+    )
+else:
+    agent = create_agent(SYSTEM_PROMPT, model_id="us.amazon.nova-micro-v1:0")
+    create_invoke_handler(
+        app, agent, MY_PLAYER_ID, POSITION_LABEL, fallback_commands,
+        fallback_cfg=GK_CONFIG,
+    )
 
 if __name__ == "__main__":
     app.run()

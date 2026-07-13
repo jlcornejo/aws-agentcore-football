@@ -101,27 +101,34 @@ def mock_agentcore_gateway():
     """Inject fake bedrock_agentcore + MCP modules for gateway-enabled agents.
 
     Call this INSTEAD of mock_agentcore() when testing gateway agents.
+    Works whether strands is installed locally or not.
     """
     mock_agentcore()
 
-    # Mock MCP client modules
-    mcp_mod = type(sys)("mcp")
-    mcp_client_mod = type(sys)("mcp.client")
-    mcp_http_mod = type(sys)("mcp.client.streamable_http")
-    mcp_http_mod.streamablehttp_client = lambda *a, **kw: None
+    # Mock MCP client modules (always needed — mcp may not be installed)
+    if "mcp" not in sys.modules:
+        mcp_mod = type(sys)("mcp")
+        sys.modules["mcp"] = mcp_mod
+    if "mcp.client" not in sys.modules:
+        mcp_client_mod = type(sys)("mcp.client")
+        sys.modules["mcp.client"] = mcp_client_mod
+    if "mcp.client.streamable_http" not in sys.modules:
+        mcp_http_mod = type(sys)("mcp.client.streamable_http")
+        mcp_http_mod.streamablehttp_client = lambda *a, **kw: None
+        sys.modules["mcp.client.streamable_http"] = mcp_http_mod
+    else:
+        sys.modules["mcp.client.streamable_http"].streamablehttp_client = lambda *a, **kw: None
 
-    sys.modules["mcp"] = mcp_mod
-    sys.modules["mcp.client"] = mcp_client_mod
-    sys.modules["mcp.client.streamable_http"] = mcp_http_mod
-
-    # Mock strands MCP tools
-    strands_tools_mod = type(sys)("strands.tools.mcp")
-    strands_mcp_client_mod = type(sys)("strands.tools.mcp.mcp_client")
-    strands_mcp_client_mod.MCPClient = _FakeMCPClient
-
-    sys.modules.setdefault("strands.tools", type(sys)("strands.tools"))
-    sys.modules["strands.tools.mcp"] = strands_tools_mod
-    sys.modules["strands.tools.mcp.mcp_client"] = strands_mcp_client_mod
+    # Mock strands MCP tools — only inject if not already present (don't clobber real strands)
+    if "strands.tools.mcp" not in sys.modules:
+        strands_tools_mod = type(sys)("strands.tools.mcp")
+        sys.modules["strands.tools.mcp"] = strands_tools_mod
+    if "strands.tools.mcp.mcp_client" not in sys.modules:
+        strands_mcp_client_mod = type(sys)("strands.tools.mcp.mcp_client")
+        strands_mcp_client_mod.MCPClient = _FakeMCPClient
+        sys.modules["strands.tools.mcp.mcp_client"] = strands_mcp_client_mod
+    else:
+        sys.modules["strands.tools.mcp.mcp_client"].MCPClient = _FakeMCPClient
 
 
 # ---------------------------------------------------------------------------

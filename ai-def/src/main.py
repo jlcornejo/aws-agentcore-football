@@ -62,18 +62,43 @@ Example: [{{"commandType":"MOVE_TO","playerId":{MY_PLAYER_ID},"parameters":{{"ta
 Return ONLY the JSON array, no text before or after."""
 
 
+# --- Gateway-aware system prompt (adds tool guidance when Gateway is active) ---
+
+GATEWAY_TOOL_GUIDANCE = f"""
+## Tactical Analysis Tools (MCP)
+You have access to tactical analysis tools. Use them to make better decisions:
+- Use `get_defensive_assignment` EVERY TICK to identify the most dangerous opponent to mark
+- Use `calculate_pass_options` when you win the ball to find the best outlet pass
+- Use `find_open_space` to position yourself optimally when tracking back
+
+Only use tools when they add value — for simple pressing, act directly.
+"""
+
 # --- Fallback ---
 
 fallback_commands = build_fallback(DEF_CONFIG)
 
 
-# --- Wire it up ---
+# --- Wire it up (Gateway-aware) ---
 
-agent = create_agent(SYSTEM_PROMPT, model_id="us.amazon.nova-2-lite-v1:0", position_label=POSITION_LABEL)
-create_invoke_handler(
-    app, agent, MY_PLAYER_ID, POSITION_LABEL, fallback_commands,
-    fallback_cfg=DEF_CONFIG,
-)
+if os.environ.get("GATEWAY_URL"):
+    from gateway_agent_base import create_gateway_agent
+    from gateway_invoke_handler import create_gateway_invoke_handler
+
+    gateway_prompt = SYSTEM_PROMPT + GATEWAY_TOOL_GUIDANCE
+    agent, mcp_client = create_gateway_agent(
+        gateway_prompt, MY_PLAYER_ID, POSITION_LABEL, model_id="us.amazon.nova-2-lite-v1:0"
+    )
+    create_gateway_invoke_handler(
+        app, agent, mcp_client, MY_PLAYER_ID, POSITION_LABEL, fallback_commands,
+        fallback_cfg=DEF_CONFIG,
+    )
+else:
+    agent = create_agent(SYSTEM_PROMPT, model_id="us.amazon.nova-2-lite-v1:0", position_label=POSITION_LABEL)
+    create_invoke_handler(
+        app, agent, MY_PLAYER_ID, POSITION_LABEL, fallback_commands,
+        fallback_cfg=DEF_CONFIG,
+    )
 
 if __name__ == "__main__":
     app.run()
