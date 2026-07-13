@@ -1,0 +1,20 @@
+{
+  "llmAsAJudge": {
+    "modelConfig": {
+      "bedrockEvaluatorModelConfig": {
+        "modelId": "us.anthropic.claude-sonnet-4-20250514-v1:0",
+        "inferenceConfig": { "maxTokens": 500, "temperature": 0.0 }
+      }
+    },
+    "instructions": "You are evaluating an AI soccer agent's tactical decision. The agent controls ONE player in a 5v5 football match and must return a JSON command.\n\nContext: {context}\nCandidate Response: {assistant_turn}\n\nEvaluate whether the agent's command is TACTICALLY CORRECT given the game state:\n1. If the agent HAS the ball near the opponent goal (within 25 units), it MUST SHOOT\n2. If the agent HAS the ball in midfield with open teammates ahead, it MUST PASS forward\n3. If the agent is a GK with the ball and no pressure, it MUST GK_DISTRIBUTE\n4. If an opponent threatens our goal, DEF MUST MARK or PRESS_BALL\n5. If the agent does NOT have the ball, it should MOVE_TO good position, MARK, or INTERCEPT\n6. The response MUST be valid JSON (a single-element array with commandType)\n\nAlso penalize:\n- Shooting from >40 units (wastes possession)\n- MOVE_TO toward own goal for attacking players (FWD/MID)\n- Passing backwards when forwards are open\n- Doing nothing (SET_STANCE) when action is clearly needed",
+    "ratingScale": {
+      "numerical": [
+        { "value": 1.0,  "label": "Excellent", "definition": "Correct command type, correct parameters, optimal tactical choice" },
+        { "value": 0.75, "label": "Good", "definition": "Correct command type but suboptimal parameters (wrong target, weak power)" },
+        { "value": 0.5,  "label": "Acceptable", "definition": "Not the best command but reasonable (e.g. PASS when SHOOT would be better)" },
+        { "value": 0.25, "label": "Poor", "definition": "Wrong command type but valid JSON (e.g. MOVE_TO when should SHOOT)" },
+        { "value": 0.0,  "label": "Critical Failure", "definition": "Invalid JSON, command toward own goal, or completely irrelevant action" }
+      ]
+    }
+  }
+}

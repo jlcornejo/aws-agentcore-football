@@ -1,0 +1,30 @@
+{
+  "scenarios": [
+    {
+      "scenario_id": "fwd1-shoots-in-range",
+      "turns": [
+        {
+          "input": {"prompt": "{\"gameState\":{\"tick\":60,\"gameTime\":120,\"playMode\":\"OPEN_PLAY\",\"score\":{\"home\":0,\"away\":0},\"ball\":{\"position\":{\"x\":35,\"y\":-2,\"z\":0},\"velocity\":{\"x\":0,\"y\":0,\"z\":0},\"isFree\":false,\"possessionAgentId\":\"agentId_3\"},\"players\":[{\"agentId\":\"agentId_0\",\"teamCode\":\"home\",\"position\":{\"x\":-50,\"y\":0},\"stamina\":0.8},{\"agentId\":\"agentId_1\",\"teamCode\":\"home\",\"position\":{\"x\":-20,\"y\":-5},\"stamina\":0.8},{\"agentId\":\"agentId_2\",\"teamCode\":\"home\",\"position\":{\"x\":10,\"y\":3},\"stamina\":0.8},{\"agentId\":\"agentId_3\",\"teamCode\":\"home\",\"position\":{\"x\":35,\"y\":-2},\"stamina\":0.8},{\"agentId\":\"agentId_4\",\"teamCode\":\"home\",\"position\":{\"x\":25,\"y\":10},\"stamina\":0.8},{\"agentId\":\"agentId_0\",\"teamCode\":\"away\",\"position\":{\"x\":50,\"y\":0},\"stamina\":0.8},{\"agentId\":\"agentId_1\",\"teamCode\":\"away\",\"position\":{\"x\":30,\"y\":8},\"stamina\":0.8},{\"agentId\":\"agentId_2\",\"teamCode\":\"away\",\"position\":{\"x\":20,\"y\":-10},\"stamina\":0.8},{\"agentId\":\"agentId_3\",\"teamCode\":\"away\",\"position\":{\"x\":0,\"y\":-5},\"stamina\":0.8},{\"agentId\":\"agentId_4\",\"teamCode\":\"away\",\"position\":{\"x\":0,\"y\":5},\"stamina\":0.8}],\"teamChat\":[]},\"teamId\":0,\"myPlayers\":[3]}"},
+          "expected_response": "A SHOOT command targeting the goal, since FWD1 has the ball only 20 units from the opponent goal with a clear shooting lane."
+        }
+      ],
+      "assertions": [
+        "Agent returned a SHOOT command because it has the ball in clear scoring range",
+        "Agent did not waste possession by passing backwards or moving away from goal"
+      ]
+    },
+    {
+      "scenario_id": "fwd1-shoots-tight-angle",
+      "turns": [
+        {
+          "input": {"prompt": "{\"gameState\":{\"tick\":80,\"gameTime\":160,\"playMode\":\"OPEN_PLAY\",\"score\":{\"home\":1,\"away\":1},\"ball\":{\"position\":{\"x\":40,\"y\":-15,\"z\":0},\"velocity\":{\"x\":0,\"y\":0,\"z\":0},\"isFree\":false,\"possessionAgentId\":\"agentId_3\"},\"players\":[{\"agentId\":\"agentId_0\",\"teamCode\":\"home\",\"position\":{\"x\":-50,\"y\":0},\"stamina\":0.7},{\"agentId\":\"agentId_1\",\"teamCode\":\"home\",\"position\":{\"x\":-15,\"y\":-3},\"stamina\":0.7},{\"agentId\":\"agentId_2\",\"teamCode\":\"home\",\"position\":{\"x\":15,\"y\":5},\"stamina\":0.7},{\"agentId\":\"agentId_3\",\"teamCode\":\"home\",\"position\":{\"x\":40,\"y\":-15},\"stamina\":0.7},{\"agentId\":\"agentId_4\",\"teamCode\":\"home\",\"position\":{\"x\":30,\"y\":12},\"stamina\":0.7},{\"agentId\":\"agentId_0\",\"teamCode\":\"away\",\"position\":{\"x\":50,\"y\":0},\"stamina\":0.8},{\"agentId\":\"agentId_1\",\"teamCode\":\"away\",\"position\":{\"x\":42,\"y\":-10},\"stamina\":0.8},{\"agentId\":\"agentId_2\",\"teamCode\":\"away\",\"position\":{\"x\":35,\"y\":0},\"stamina\":0.8},{\"agentId\":\"agentId_3\",\"teamCode\":\"away\",\"position\":{\"x\":10,\"y\":-5},\"stamina\":0.8},{\"agentId\":\"agentId_4\",\"teamCode\":\"away\",\"position\":{\"x\":10,\"y\":5},\"stamina\":0.8}],\"teamChat\":[]},\"teamId\":0,\"myPlayers\":[3]}"},
+          "expected_response": "A SHOOT or PASS command. FWD1 is at a tight angle (y=-15) with a defender nearby, so shooting or passing to FWD2 (open at y=12) are both valid."
+        }
+      ],
+      "assertions": [
+        "Agent attempted to create a goal scoring opportunity",
+        "Agent did not move backwards or take a defensive action while in the attacking third"
+      ]
+    }
+  ]
+}

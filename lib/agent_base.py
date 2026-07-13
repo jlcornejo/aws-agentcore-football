@@ -1,6 +1,7 @@
 """Base agent factory for AI soccer position agents."""
 
 import json
+import os
 from typing import Callable, Optional
 from strands import Agent
 from strands.models import BedrockModel
@@ -10,6 +11,15 @@ from state import summarize_state, get_goal_positions
 from fallback import FallbackConfig, build_last_resort
 from prompt_manager import PromptCache, get_prompt_id_for_position
 from memory import create_memory_session_manager
+
+
+# ---------------------------------------------------------------------------
+# Guardrails config (via env vars)
+# ---------------------------------------------------------------------------
+
+GUARDRAIL_ID = os.environ.get("GUARDRAIL_ID")
+GUARDRAIL_VERSION = os.environ.get("GUARDRAIL_VERSION", "DRAFT")
+GUARDRAIL_TRACE = os.environ.get("GUARDRAIL_TRACE", "disabled")  # "enabled" | "disabled"
 
 
 def create_agent(
@@ -23,8 +33,19 @@ def create_agent(
     If MEMORY_ENABLED=true and MEMORY_ID is configured, the agent will
     use AgentCore Memory via a session_manager for short-term recall
     between ticks (opponent patterns, coaching instructions, etc.).
+
+    If GUARDRAIL_ID is set, attaches a Bedrock Guardrail to the model
+    for content filtering on input/output.
     """
-    model = BedrockModel(model_id=model_id)
+    model_kwargs = {"model_id": model_id}
+
+    # Attach Bedrock Guardrail if configured
+    if GUARDRAIL_ID:
+        model_kwargs["guardrail_id"] = GUARDRAIL_ID
+        model_kwargs["guardrail_version"] = GUARDRAIL_VERSION
+        model_kwargs["guardrail_trace"] = GUARDRAIL_TRACE
+
+    model = BedrockModel(**model_kwargs)
 
     # Attempt to attach memory session manager
     session_manager = None
@@ -109,6 +130,12 @@ def create_invoke_handler(
     else:
         log.info(f"{position_label}: Using static prompt (no PROMPT_ID env var)")
 
+    # --- Guardrails info ---
+    if GUARDRAIL_ID:
+        log.info(f"{position_label}: Guardrails ENABLED (id={GUARDRAIL_ID}, version={GUARDRAIL_VERSION})")
+    else:
+        log.info(f"{position_label}: Guardrails DISABLED (no GUARDRAIL_ID env var)")
+
     @app.entrypoint
     async def invoke(payload, context):
         try:
@@ -135,6 +162,14 @@ def create_invoke_handler(
 
             response = agent(state_summary)
             response_text = str(response)
+
+            # If guardrail intervened, skip parsing and go to fallback
+            if hasattr(response, 'stop_reason') and response.stop_reason == "guardrail_intervened":
+                log.warn(f"{position_label}: Guardrail intervened, using fallback")
+                commands = fallback_fn(game_state, team_id, effective_pid)
+                log.info(f"Fallback returned {len(commands)} commands")
+                yield json.dumps(commands)
+                return
 
             # Strands may produce multi-turn responses. The last turn often
             # hallucinates (e.g. MOVE_TO own goal). Try parsing the full

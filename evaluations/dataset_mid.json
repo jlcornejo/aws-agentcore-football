@@ -1,0 +1,56 @@
+{
+  "scenarios": [
+    {
+      "scenario_id": "mid-passes-to-fwd",
+      "turns": [
+        {
+          "input": {"prompt": "{\"gameState\":{\"tick\":60,\"gameTime\":120,\"playMode\":\"OPEN_PLAY\",\"score\":{\"home\":0,\"away\":0},\"ball\":{\"position\":{\"x\":5,\"y\":0,\"z\":0},\"velocity\":{\"x\":0,\"y\":0,\"z\":0},\"isFree\":false,\"possessionAgentId\":\"agentId_2\"},\"players\":[{\"agentId\":\"agentId_0\",\"teamCode\":\"home\",\"position\":{\"x\":-50,\"y\":0},\"stamina\":0.8},{\"agentId\":\"agentId_1\",\"teamCode\":\"home\",\"position\":{\"x\":-20,\"y\":-5},\"stamina\":0.8},{\"agentId\":\"agentId_2\",\"teamCode\":\"home\",\"position\":{\"x\":5,\"y\":0},\"stamina\":0.8},{\"agentId\":\"agentId_3\",\"teamCode\":\"home\",\"position\":{\"x\":30,\"y\":-8},\"stamina\":0.8},{\"agentId\":\"agentId_4\",\"teamCode\":\"home\",\"position\":{\"x\":28,\"y\":8},\"stamina\":0.8},{\"agentId\":\"agentId_0\",\"teamCode\":\"away\",\"position\":{\"x\":50,\"y\":0},\"stamina\":0.8},{\"agentId\":\"agentId_1\",\"teamCode\":\"away\",\"position\":{\"x\":25,\"y\":5},\"stamina\":0.8},{\"agentId\":\"agentId_2\",\"teamCode\":\"away\",\"position\":{\"x\":15,\"y\":0},\"stamina\":0.8},{\"agentId\":\"agentId_3\",\"teamCode\":\"away\",\"position\":{\"x\":-5,\"y\":-10},\"stamina\":0.8},{\"agentId\":\"agentId_4\",\"teamCode\":\"away\",\"position\":{\"x\":-5,\"y\":10},\"stamina\":0.8}],\"teamChat\":[]},\"teamId\":0,\"myPlayers\":[2]}"},
+          "expected_response": "A PASS command to player 3 or 4 (forwards) who are open ahead in attacking positions at x=30 and x=28."
+        }
+      ],
+      "assertions": [
+        "Agent passed the ball forward toward the attacking players",
+        "Agent did not shoot from 50 units away from the goal which would waste possession"
+      ]
+    },
+    {
+      "scenario_id": "mid-keeps-possession-winning",
+      "turns": [
+        {
+          "input": {"prompt": "{\"gameState\":{\"tick\":120,\"gameTime\":240,\"playMode\":\"OPEN_PLAY\",\"score\":{\"home\":2,\"away\":0},\"ball\":{\"position\":{\"x\":5,\"y\":0,\"z\":0},\"velocity\":{\"x\":0,\"y\":0,\"z\":0},\"isFree\":false,\"possessionAgentId\":\"agentId_2\"},\"players\":[{\"agentId\":\"agentId_0\",\"teamCode\":\"home\",\"position\":{\"x\":-50,\"y\":0},\"stamina\":0.6},{\"agentId\":\"agentId_1\",\"teamCode\":\"home\",\"position\":{\"x\":-20,\"y\":-5},\"stamina\":0.6},{\"agentId\":\"agentId_2\",\"teamCode\":\"home\",\"position\":{\"x\":5,\"y\":0},\"stamina\":0.6},{\"agentId\":\"agentId_3\",\"teamCode\":\"home\",\"position\":{\"x\":20,\"y\":-8},\"stamina\":0.6},{\"agentId\":\"agentId_4\",\"teamCode\":\"home\",\"position\":{\"x\":20,\"y\":8},\"stamina\":0.6},{\"agentId\":\"agentId_0\",\"teamCode\":\"away\",\"position\":{\"x\":50,\"y\":0},\"stamina\":0.8},{\"agentId\":\"agentId_1\",\"teamCode\":\"away\",\"position\":{\"x\":25,\"y\":5},\"stamina\":0.8},{\"agentId\":\"agentId_2\",\"teamCode\":\"away\",\"position\":{\"x\":15,\"y\":0},\"stamina\":0.8},{\"agentId\":\"agentId_3\",\"teamCode\":\"away\",\"position\":{\"x\":-5,\"y\":-10},\"stamina\":0.8},{\"agentId\":\"agentId_4\",\"teamCode\":\"away\",\"position\":{\"x\":-5,\"y\":10},\"stamina\":0.8}],\"teamChat\":[]},\"teamId\":0,\"myPlayers\":[2]}"},
+          "expected_response": "A PASS command to keep possession safely. Winning 2-0 with only 60 seconds left, the agent should not take risky long-range shots."
+        }
+      ],
+      "assertions": [
+        "Agent maintained possession with a safe pass or positional move",
+        "Agent did not take a risky long-range shot while winning comfortably with little time remaining"
+      ]
+    },
+    {
+      "scenario_id": "mid-desperate-attack-losing",
+      "turns": [
+        {
+          "input": {"prompt": "{\"gameState\":{\"tick\":140,\"gameTime\":280,\"playMode\":\"OPEN_PLAY\",\"score\":{\"home\":0,\"away\":1},\"ball\":{\"position\":{\"x\":20,\"y\":0,\"z\":0},\"velocity\":{\"x\":0,\"y\":0,\"z\":0},\"isFree\":false,\"possessionAgentId\":\"agentId_2\"},\"players\":[{\"agentId\":\"agentId_0\",\"teamCode\":\"home\",\"position\":{\"x\":-50,\"y\":0},\"stamina\":0.5},{\"agentId\":\"agentId_1\",\"teamCode\":\"home\",\"position\":{\"x\":-10,\"y\":0},\"stamina\":0.5},{\"agentId\":\"agentId_2\",\"teamCode\":\"home\",\"position\":{\"x\":20,\"y\":0},\"stamina\":0.5},{\"agentId\":\"agentId_3\",\"teamCode\":\"home\",\"position\":{\"x\":30,\"y\":-5},\"stamina\":0.5},{\"agentId\":\"agentId_4\",\"teamCode\":\"home\",\"position\":{\"x\":30,\"y\":5},\"stamina\":0.5},{\"agentId\":\"agentId_0\",\"teamCode\":\"away\",\"position\":{\"x\":50,\"y\":0},\"stamina\":0.8},{\"agentId\":\"agentId_1\",\"teamCode\":\"away\",\"position\":{\"x\":25,\"y\":8},\"stamina\":0.8},{\"agentId\":\"agentId_2\",\"teamCode\":\"away\",\"position\":{\"x\":15,\"y\":0},\"stamina\":0.8},{\"agentId\":\"agentId_3\",\"teamCode\":\"away\",\"position\":{\"x\":5,\"y\":-10},\"stamina\":0.8},{\"agentId\":\"agentId_4\",\"teamCode\":\"away\",\"position\":{\"x\":5,\"y\":10},\"stamina\":0.8}],\"teamChat\":[]},\"teamId\":0,\"myPlayers\":[2]}"},
+          "expected_response": "An aggressive attacking action - SHOOT, PASS forward, or MOVE_TO toward goal. Losing 0-1 with only 20 seconds left requires urgency."
+        }
+      ],
+      "assertions": [
+        "Agent took an aggressive attacking action when losing with very little time remaining",
+        "Agent did not play conservatively or defensively when behind in the final seconds"
+      ]
+    },
+    {
+      "scenario_id": "mid-counter-through-ball",
+      "turns": [
+        {
+          "input": {"prompt": "{\"gameState\":{\"tick\":60,\"gameTime\":120,\"playMode\":\"OPEN_PLAY\",\"score\":{\"home\":0,\"away\":0},\"ball\":{\"position\":{\"x\":-10,\"y\":3,\"z\":0},\"velocity\":{\"x\":0,\"y\":0,\"z\":0},\"isFree\":false,\"possessionAgentId\":\"agentId_2\"},\"players\":[{\"agentId\":\"agentId_0\",\"teamCode\":\"home\",\"position\":{\"x\":-50,\"y\":0},\"stamina\":0.8},{\"agentId\":\"agentId_1\",\"teamCode\":\"home\",\"position\":{\"x\":-15,\"y\":0},\"stamina\":0.8},{\"agentId\":\"agentId_2\",\"teamCode\":\"home\",\"position\":{\"x\":-10,\"y\":3},\"stamina\":0.8},{\"agentId\":\"agentId_3\",\"teamCode\":\"home\",\"position\":{\"x\":25,\"y\":-8},\"stamina\":0.8},{\"agentId\":\"agentId_4\",\"teamCode\":\"home\",\"position\":{\"x\":25,\"y\":8},\"stamina\":0.8},{\"agentId\":\"agentId_0\",\"teamCode\":\"away\",\"position\":{\"x\":50,\"y\":0},\"stamina\":0.8},{\"agentId\":\"agentId_1\",\"teamCode\":\"away\",\"position\":{\"x\":-8,\"y\":5},\"stamina\":0.8},{\"agentId\":\"agentId_2\",\"teamCode\":\"away\",\"position\":{\"x\":-12,\"y\":-5},\"stamina\":0.8},{\"agentId\":\"agentId_3\",\"teamCode\":\"away\",\"position\":{\"x\":-5,\"y\":0},\"stamina\":0.8},{\"agentId\":\"agentId_4\",\"teamCode\":\"away\",\"position\":{\"x\":-18,\"y\":10},\"stamina\":0.8}],\"teamChat\":[]},\"teamId\":0,\"myPlayers\":[2]}"},
+          "expected_response": "A PASS (through ball) to player 3 or 4 who are wide open at x=25 with no defenders near them. The MID is under high pressure from 4 opponents in our half."
+        }
+      ],
+      "assertions": [
+        "Agent played a forward pass to escape pressure from multiple opponents in our half",
+        "Agent did not shoot from 65 units away from goal while under heavy pressure"
+      ]
+    }
+  ]
+}

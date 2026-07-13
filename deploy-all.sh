@@ -2,18 +2,13 @@
 set -e
 
 # ============================================================================
-# Deploy all 5 agents to Amazon Bedrock AgentCore
+# Deploy agents to Amazon Bedrock AgentCore — PARALLEL deployment
 # ============================================================================
 #
 # Usage:
-#   ./deploy-all.sh              # deploy all 5 agents
+#   ./deploy-all.sh              # deploy all 5 agents in parallel
 #   ./deploy-all.sh ai-gk       # deploy single agent
-#   ./deploy-all.sh ai-mid      # redeploy just the midfielder
-#
-# Prerequisites:
-#   pip install bedrock-agentcore-starter-toolkit
-#   aws credentials configured (or Workshop Studio env vars set)
-#   rsync installed (pre-installed on macOS)
+#   ./deploy-all.sh ai-mid ai-fwd1  # deploy specific agents in parallel
 # ============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -24,124 +19,90 @@ export AWS_DEFAULT_REGION
 
 ALL_AGENTS=("ai-gk" "ai-def" "ai-mid" "ai-fwd1" "ai-fwd2")
 
-# If agent name passed as argument, deploy only that one
 if [ -n "$1" ]; then
-  AGENTS=("$1")
+  AGENTS=("$@")
 else
   AGENTS=("${ALL_AGENTS[@]}")
 fi
 
 echo "=========================================="
-echo "  ⚽ Agentic Football Cup — Deploy"
+echo "  ⚽ Agentic Football Cup — Parallel Deploy"
 echo "=========================================="
 echo ""
 
-# ------ Pre-flight checks ------
-echo "Checking prerequisites..."
-
+# Pre-flight
 if ! command -v agentcore &> /dev/null; then
-  echo "  ❌ 'agentcore' CLI not found."
-  echo "     Install: pip install bedrock-agentcore-starter-toolkit"
+  echo "  ❌ 'agentcore' CLI not found. Install: pip install bedrock-agentcore-starter-toolkit"
   exit 1
 fi
-echo "  ✅ agentcore CLI"
-
-if ! command -v rsync &> /dev/null; then
-  echo "  ❌ 'rsync' not found."
-  exit 1
-fi
-echo "  ✅ rsync"
-
-if ! command -v aws &> /dev/null; then
-  echo "  ❌ 'aws' CLI not found."
-  exit 1
-fi
-echo "  ✅ aws CLI"
 
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text 2>/dev/null) || {
-  echo "  ❌ No valid AWS credentials. Set them first."
+  echo "  ❌ No valid AWS credentials."
   exit 1
 }
 export AWS_ACCOUNT_ID
-echo "  ✅ AWS Account: $AWS_ACCOUNT_ID"
-echo "  ✅ Region: $AWS_DEFAULT_REGION"
+echo "  Account: $AWS_ACCOUNT_ID | Region: $AWS_DEFAULT_REGION"
+echo "  Agents:  ${AGENTS[*]}"
+echo "  Mode:    PARALLEL"
 echo ""
 
-# ------ Cleanup on exit ------
-cleanup() {
-  rm -rf "$BUILD_DIR"
-}
+# Cleanup on exit
+cleanup() { rm -rf "$BUILD_DIR"; }
 trap cleanup EXIT
 
-# ------ Deploy each agent ------
-DEPLOYED=()
-FAILED=()
+# Deploy one agent (called as background job)
+deploy_one() {
+  local AGENT=$1
+  local AGENT_SRC="$SCRIPT_DIR/$AGENT"
+  local STAGE="$BUILD_DIR/$AGENT"
 
-for AGENT in "${AGENTS[@]}"; do
-  AGENT_SRC="$SCRIPT_DIR/$AGENT"
-  STAGE="$BUILD_DIR/$AGENT"
-
-  echo "=========================================="
-  echo "  📦 Deploying: $AGENT"
-  echo "=========================================="
-
-  # Validate
   if [ ! -d "$AGENT_SRC" ]; then
-    echo "  ❌ Directory not found: $AGENT_SRC"
-    FAILED+=("$AGENT")
-    continue
+    echo "  ❌ $AGENT: directory not found"
+    return 1
   fi
 
-  # Assemble staging directory
+  # Stage
   rm -rf "$STAGE"
   mkdir -p "$STAGE/src"
-
-  # Copy agent source
   cp "$AGENT_SRC/src/main.py" "$STAGE/src/main.py"
-
-  # Copy shared lib (exclude __pycache__)
   rsync -a --exclude='__pycache__' "$SCRIPT_DIR/lib/" "$STAGE/lib/"
-
-  # Copy requirements
   cp "$AGENT_SRC/requirements.txt" "$STAGE/requirements.txt"
 
-  # Generate .bedrock_agentcore.yaml from template
-  MEMORY_MODE="${MEMORY_MODE:-NO_MEMORY}"
+  # Generate config
   sed \
     -e "s|\${AWS_ACCOUNT_ID}|$AWS_ACCOUNT_ID|g" \
     -e "s|\${AWS_DEFAULT_REGION}|$AWS_DEFAULT_REGION|g" \
-    -e "s|\${MEMORY_MODE:-NO_MEMORY}|$MEMORY_MODE|g" \
     "$AGENT_SRC/.bedrock_agentcore.yaml.template" > "$STAGE/.bedrock_agentcore.yaml"
 
   # Deploy
-  echo "  Deploying from: $STAGE"
-  if (cd "$STAGE" && agentcore deploy --auto-update-on-conflict); then
+  if (cd "$STAGE" && agentcore deploy --auto-update-on-conflict > /tmp/deploy_${AGENT}.log 2>&1); then
     echo "  ✅ $AGENT: DEPLOYED"
-    DEPLOYED+=("$AGENT")
   else
-    echo "  ❌ $AGENT: FAILED"
-    FAILED+=("$AGENT")
+    echo "  ❌ $AGENT: FAILED (see /tmp/deploy_${AGENT}.log)"
+    return 1
   fi
-  echo ""
+}
+
+# Launch all deploys in parallel
+PIDS=()
+for AGENT in "${AGENTS[@]}"; do
+  deploy_one "$AGENT" &
+  PIDS+=($!)
 done
 
-# ------ Summary ------
-echo "=========================================="
-echo "  Deployment Summary"
-echo "=========================================="
-echo ""
-echo "  Deployed: ${DEPLOYED[*]:-none}"
-echo "  Failed:   ${FAILED[*]:-none}"
-echo "  Account:  $AWS_ACCOUNT_ID"
-echo "  Region:   $AWS_DEFAULT_REGION"
-echo ""
+# Wait for all
+FAILED=0
+for i in "${!PIDS[@]}"; do
+  if ! wait ${PIDS[$i]}; then
+    FAILED=$((FAILED + 1))
+  fi
+done
 
-if [ ${#FAILED[@]} -gt 0 ]; then
-  echo "⚠️  Some agents failed. Check output above."
-  exit 1
+echo ""
+echo "=========================================="
+if [ $FAILED -eq 0 ]; then
+  echo "  🏆 All ${#AGENTS[@]} agents deployed!"
+else
+  echo "  ⚠️  $FAILED agent(s) failed. Check /tmp/deploy_*.log"
 fi
-
-echo "🏆 All agents deployed! Now:"
-echo "   1. Go to Bedrock Console → AgentCore → Runtime"
-echo "   2. Copy each agent's ARN"
-echo "   3. Paste in Player Portal → My Team"
+echo "=========================================="

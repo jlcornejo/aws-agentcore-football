@@ -184,6 +184,42 @@ pip install bedrock-agentcore-starter-toolkit
 AWS_DEFAULT_REGION=us-east-1 ./deploy-all.sh
 ```
 
+## Guardrails (Bedrock)
+
+Los agentes soportan [Amazon Bedrock Guardrails](https://docs.aws.amazon.com/bedrock/latest/userguide/guardrails.html) para protección automática contra:
+
+- **Prompt injection** — bloquea intentos de sobrescribir instrucciones
+- **Contenido off-topic** — solo responde con comandos de fútbol
+- **Filtros de contenido** — violencia, odio, etc.
+- **PII** — bloquea emails, teléfonos, keys de AWS
+
+### Setup
+
+```bash
+# 1. Crear el guardrail en Bedrock
+python setup-guardrail.py
+
+# 2. Agregar las variables que imprime al .env
+export GUARDRAIL_ID="abc123"
+export GUARDRAIL_VERSION="1"
+export GUARDRAIL_TRACE="enabled"   # opcional, para debug
+
+# 3. Re-deploy (o reiniciar agentes localmente)
+./deploy-all.sh
+```
+
+### ¿Qué pasa cuando el guardrail bloquea?
+
+Si el input o output es bloqueado, el agente cae al **fallback rule-based** (como si el LLM fallara). Esto garantiza que el jugador nunca se quede sin comando.
+
+### Variables de entorno
+
+| Variable | Default | Descripción |
+|----------|---------|-------------|
+| `GUARDRAIL_ID` | *(none)* | ID del guardrail de Bedrock. Si no se configura, guardrails está deshabilitado. |
+| `GUARDRAIL_VERSION` | `DRAFT` | Versión del guardrail (`"DRAFT"` o número publicado) |
+| `GUARDRAIL_TRACE` | `disabled` | `"enabled"` para ver trazas de guardrails en logs |
+
 ## Links
 
 - [Workshop oficial](https://catalog.workshops.aws/agentic-football/en-US)

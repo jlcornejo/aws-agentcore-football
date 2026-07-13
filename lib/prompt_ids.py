@@ -9,8 +9,4 @@ Generados por: python sync-prompts.py
 
 PROMPT_IDS = {
     "GK": "GA6812ANNO",
-    "DEF": "VF2LPCCOLA",
-    "MID": "7D5WC5LKC9",
-    "FWD1": "VO5I1KVOHQ",
-    "FWD2": "F86PF5FS1R",
 }

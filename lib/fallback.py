@@ -77,10 +77,11 @@ GK_CONFIG = FallbackConfig(
 )
 
 DEF_CONFIG = FallbackConfig(
-    possession_action="PASS",
+    possession_action="SHOOT_OR_PASS",
     pass_exclude_ids=[0],  # don't pass back to GK
     default_x_factor=0.6, default_x_ref="my_goal", default_y=0,
     mark_threshold=30.0, mark_tightness="TIGHT",
+    shoot_threshold=35.0, shoot_aim="CENTER", shoot_power=1.0,
     default_stance=2,
     last_resort_command_type="SET_STANCE", last_resort_params={"stance": 2},
 )
@@ -89,7 +90,7 @@ MID_CONFIG = FallbackConfig(
     possession_action="SHOOT_OR_PASS",
     default_x_factor=0.5, default_x_ref="ball_x", default_y="track_ball_30",
     press_distance=20.0, press_intensity=0.6,
-    shoot_threshold=25.0, shoot_aim="TR", shoot_power=0.8,
+    shoot_threshold=40.0, shoot_aim="TR", shoot_power=1.0,
     default_stance=0,
     last_resort_command_type="PRESS_BALL", last_resort_params={"intensity": 0.5},
     last_resort_duration=3,
@@ -101,7 +102,7 @@ FWD1_CONFIG = FallbackConfig(
     support_x_factor=0.5, support_y=-10, support_sprint=True,
     default_x_factor=0.4, default_x_ref="opp_goal", default_y=-8,
     press_distance=20.0, press_intensity=0.7,
-    shoot_aim="TR", shoot_power=0.9,
+    shoot_threshold=45.0, shoot_aim="TR", shoot_power=1.0,
     default_stance=1,
     last_resort_command_type="PRESS_BALL", last_resort_params={"intensity": 0.6},
     last_resort_duration=3,
@@ -113,7 +114,7 @@ FWD2_CONFIG = FallbackConfig(
     support_x_factor=0.5, support_y=10, support_sprint=True,
     default_x_factor=0.4, default_x_ref="opp_goal", default_y=8,
     press_distance=20.0, press_intensity=0.7,
-    shoot_aim="BL", shoot_power=0.9,
+    shoot_threshold=45.0, shoot_aim="BL", shoot_power=1.0,
     default_stance=1,
     last_resort_command_type="PRESS_BALL", last_resort_params={"intensity": 0.6},
     last_resort_duration=3,

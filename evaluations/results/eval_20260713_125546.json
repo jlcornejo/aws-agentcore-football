@@ -1,0 +1,178 @@
+[
+  {
+    "scenario": "fwd1-shoots-in-range",
+    "agent": "ai-fwd1",
+    "position": "FWD1",
+    "expected": [
+      "SHOOT"
+    ],
+    "actual": "SHOOT",
+    "params": {
+      "aim_location": "CENTER",
+      "power": 1.0
+    },
+    "correct": true,
+    "valid_json": true,
+    "latency_ms": 3999.9020099639893,
+    "raw_response": "```json\n[{\"commandType\":\"SHOOT\",\"playerId\":3,\"parameters\":{\"aim_location\":\"CENTER\",\"power\":1.0},\"duration\":0}]\n```\n"
+  },
+  {
+    "scenario": "mid-passes-to-fwd",
+    "agent": "ai-mid",
+    "position": "MID",
+    "expected": [
+      "PASS",
+      "SHOOT"
+    ],
+    "actual": "SHOOT",
+    "params": {
+      "aim_location": "TR",
+      "power": 1.0
+    },
+    "correct": true,
+    "valid_json": true,
+    "latency_ms": 2601.2463569641113,
+    "raw_response": "```json\n[{\"commandType\":\"SHOOT\",\"playerId\":2,\"parameters\":{\"aim_location\":\"TR\",\"power\":1.0},\"duration\":0}]\n```\n"
+  },
+  {
+    "scenario": "gk-distributes",
+    "agent": "ai-gk",
+    "position": "GK",
+    "expected": [
+      "GK_DISTRIBUTE"
+    ],
+    "actual": "GK_DISTRIBUTE",
+    "params": {
+      "target_player_id": 1,
+      "method": "THROW"
+    },
+    "correct": true,
+    "valid_json": true,
+    "latency_ms": 5867.052793502808,
+    "raw_response": "[{\"commandType\":\"GK_DISTRIBUTE\",\"playerId\":0,\"parameters\":{\"target_player_id\":1,\"method\":\"THROW\"},\"duration\":0}]\n"
+  },
+  {
+    "scenario": "def-clears-under-pressure",
+    "agent": "ai-def",
+    "position": "DEF",
+    "expected": [
+      "PASS",
+      "SHOOT",
+      "GK_DISTRIBUTE"
+    ],
+    "actual": "PASS",
+    "params": {
+      "target_player_id": 4,
+      "type": "THROUGH"
+    },
+    "correct": true,
+    "valid_json": true,
+    "latency_ms": 5589.146137237549,
+    "raw_response": "```json\n[{\"commandType\":\"PASS\",\"playerId\":1,\"parameters\":{\"target_player_id\":4,\"type\":\"THROUGH\"}}]\n```\n"
+  },
+  {
+    "scenario": "fwd2-runs-into-space",
+    "agent": "ai-fwd2",
+    "position": "FWD2",
+    "expected": [
+      "MOVE_TO"
+    ],
+    "actual": "MOVE_TO",
+    "params": {
+      "target_x": 55,
+      "target_y": 0.0,
+      "sprint": true
+    },
+    "correct": true,
+    "valid_json": true,
+    "latency_ms": 2651.055097579956,
+    "raw_response": "```json\n[{\"commandType\":\"MOVE_TO\",\"playerId\":4,\"parameters\":{\"target_x\":55,\"target_y\":0.0,\"sprint\":true},\"duration\":0}]\n```\n"
+  },
+  {
+    "scenario": "def-marks-threat",
+    "agent": "ai-def",
+    "position": "DEF",
+    "expected": [
+      "MARK",
+      "PRESS_BALL",
+      "INTERCEPT"
+    ],
+    "actual": "PRESS_BALL",
+    "params": {
+      "intensity": 0.95
+    },
+    "correct": true,
+    "valid_json": true,
+    "latency_ms": 3734.1458797454834,
+    "raw_response": "```json\n[{\"commandType\":\"PRESS_BALL\",\"playerId\":1,\"parameters\":{\"intensity\":0.95}}]\n```\n"
+  },
+  {
+    "scenario": "mid-desperate-attack",
+    "agent": "ai-mid",
+    "position": "MID",
+    "expected": [
+      "SHOOT",
+      "PASS",
+      "MOVE_TO"
+    ],
+    "actual": "SHOOT",
+    "params": {
+      "aim_location": "TR",
+      "power": 1.0
+    },
+    "correct": true,
+    "valid_json": true,
+    "latency_ms": 1722.0427989959717,
+    "raw_response": "```json\n[{\"commandType\":\"SHOOT\",\"playerId\":2,\"parameters\":{\"aim_location\":\"TR\",\"power\":1.0},\"duration\":0}]\n```\n"
+  },
+  {
+    "scenario": "mid-keeps-possession-winning",
+    "agent": "ai-mid",
+    "position": "MID",
+    "expected": [
+      "PASS",
+      "MOVE_TO"
+    ],
+    "actual": "SHOOT",
+    "params": {
+      "aim_location": "TR",
+      "power": 1.0
+    },
+    "correct": false,
+    "valid_json": true,
+    "latency_ms": 5185.447931289673,
+    "raw_response": "```json\n[{\"commandType\":\"SHOOT\",\"playerId\":2,\"parameters\":{\"aim_location\":\"TR\",\"power\":1.0},\"duration\":0}]\n```\n"
+  },
+  {
+    "scenario": "gk-intercepts-loose-ball",
+    "agent": "ai-gk",
+    "position": "GK",
+    "expected": [
+      "INTERCEPT",
+      "MOVE_TO"
+    ],
+    "actual": "MOVE_TO",
+    "params": {},
+    "correct": true,
+    "valid_json": true,
+    "latency_ms": 3295.5751419067383,
+    "raw_response": "[{\"commandType\":\"MOVE_TO\",\"target_x\":-50.0,\"target_y\":0.0,\"sprint\":false}]\n"
+  },
+  {
+    "scenario": "counter-through-ball",
+    "agent": "ai-mid",
+    "position": "MID",
+    "expected": [
+      "PASS"
+    ],
+    "actual": "SHOOT",
+    "params": {
+      "aim_location": "TR",
+      "power": 0.9
+    },
+    "correct": false,
+    "valid_json": true,
+    "latency_ms": 2092.3309326171875,
+    "raw_response": "```json\n[{\"commandType\":\"SHOOT\",\"playerId\":2,\"parameters\":{\"aim_location\":\"TR\",\"power\":0.9},\"duration\":0}]\n```\n"
+  }
+]
