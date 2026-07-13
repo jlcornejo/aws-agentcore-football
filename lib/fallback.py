@@ -174,29 +174,15 @@ def build_fallback(cfg: FallbackConfig) -> Callable[[dict, int, int], list[dict]
         if cfg.possession_action in ("SHOOT_OR_ADVANCE",):
             _, _, we_have_ball = get_possession_info(ball, players, team_id)
             if we_have_ball:
-                # Move into attacking space to receive a pass
                 return [_cmd("MOVE_TO", my_player_id, team_id,
                              {"target_x": opp_goal_x * cfg.support_x_factor,
                               "target_y": cfg.support_y, "sprint": cfg.support_sprint})]
 
         # --- Press if close to ball and opponent has it ---
         _, _, we_have_ball = get_possession_info(ball, players, team_id)
-        if not we_have_ball:
-            dist_to_ball = dist(pos, ball_pos)
-
-            # Only the NEAREST player to the ball should press — others hold shape
-            my_teammates = [p for p in players if _is_my_team(p, team_id) and _player_idx(p) != 0]
-            am_nearest = True
-            for t in my_teammates:
-                if _player_idx(t) == my_player_id:
-                    continue
-                if dist(t.get("position", {}), ball_pos) < dist_to_ball:
-                    am_nearest = False
-                    break
-
-            if am_nearest and dist_to_ball < cfg.press_distance:
-                return [_cmd("PRESS_BALL", my_player_id, team_id,
-                             {"intensity": cfg.press_intensity}, duration=cfg.press_duration)]
+        if not we_have_ball and dist(pos, ball_pos) < cfg.press_distance:
+            return [_cmd("PRESS_BALL", my_player_id, team_id,
+                         {"intensity": cfg.press_intensity}, duration=cfg.press_duration)]
 
         # --- Default position ---
         tx, ty = _default_pos(cfg, my_goal_x, opp_goal_x, ball_pos)
@@ -230,61 +216,31 @@ def _on_ball(cfg, game_state, players, team_id, my_player_id, pos, my_goal_x, op
         exclude = set(cfg.pass_exclude_ids) | {my_player_id}
         teammates = [p for p in players if _is_my_team(p, team_id) and _player_idx(p) not in exclude]
         if teammates:
-            # Prefer passing FORWARD: pick the teammate furthest toward opponent goal
-            target = max(teammates, key=lambda p: p.get("position", {}).get("x", 0) * (1 if opp_goal_x > 0 else -1))
-            ptype = "GROUND" if dist(target.get("position", {}), pos) < 25 else "AERIAL"
+            target = min(teammates, key=lambda p: dist(p.get("position", {}), pos))
             return [_cmd("PASS", my_player_id, team_id,
-                         {"target_player_id": _player_idx(target), "type": ptype})]
+                         {"target_player_id": _player_idx(target), "type": "GROUND"})]
         return [_cmd("PASS", my_player_id, team_id,
                      {"target_player_id": 2, "type": "GROUND"})]
 
     if cfg.possession_action == "SHOOT_OR_PASS":
-        dist_to_goal = abs(pos.get("x", 0) - opp_goal_x)
-        # SHOOT if in range AND decent angle
-        if dist_to_goal < cfg.shoot_threshold and abs(pos.get("y", 0)) < 20:
+        if abs(pos.get("x", 0) - opp_goal_x) < cfg.shoot_threshold:
             return [_cmd("SHOOT", my_player_id, team_id,
                          {"aim_location": cfg.shoot_aim, "power": cfg.shoot_power})]
-        # PASS to forward if one is closer to goal than me
         forwards = [p for p in players if _is_my_team(p, team_id) and _player_idx(p) in (3, 4)]
         if forwards:
-            best_fwd = min(forwards, key=lambda p: abs(p.get("position", {}).get("x", 0) - opp_goal_x))
-            fwd_dist = abs(best_fwd.get("position", {}).get("x", 0) - opp_goal_x)
-            # Pass to forward if they're closer to goal than me
-            if fwd_dist < dist_to_goal:
-                ptype = "THROUGH" if dist(best_fwd.get("position", {}), pos) > 20 else "GROUND"
-                return [_cmd("PASS", my_player_id, team_id,
-                             {"target_player_id": _player_idx(best_fwd), "type": ptype})]
-        # If I'm the most advanced player: advance toward goal with ball
-        if dist_to_goal > cfg.shoot_threshold:
-            advance_x = pos.get("x", 0) + (10 if opp_goal_x > 0 else -10)  # Move 10 units forward
-            advance_x = max(-50, min(50, advance_x))
-            return [_cmd("MOVE_TO", my_player_id, team_id,
-                         {"target_x": advance_x, "target_y": pos.get("y", 0) * 0.5, "sprint": True})]
-        # Fallback: pass to anyone forward
-        teammates = [p for p in players if _is_my_team(p, team_id) and _player_idx(p) != my_player_id and _player_idx(p) != 0]
-        if teammates:
-            target = max(teammates, key=lambda p: p.get("position", {}).get("x", 0) * (1 if opp_goal_x > 0 else -1))
+            target = min(forwards, key=lambda p: abs(p.get("position", {}).get("x", 0) - opp_goal_x))
             return [_cmd("PASS", my_player_id, team_id,
                          {"target_player_id": _player_idx(target), "type": "GROUND"})]
         return [_cmd("PASS", my_player_id, team_id,
                      {"target_player_id": 3, "type": "GROUND"})]
 
     if cfg.possession_action == "SHOOT_OR_ADVANCE":
-        dist_to_goal = abs(pos.get("x", 0) - opp_goal_x)
-        # Don't shoot from extreme angles (near sidelines) — pass instead
-        if dist_to_goal < cfg.shoot_threshold and abs(pos.get("y", 0)) < 20:
+        if abs(pos.get("x", 0) - opp_goal_x) < cfg.shoot_threshold:
             return [_cmd("SHOOT", my_player_id, team_id,
                          {"aim_location": cfg.shoot_aim, "power": cfg.shoot_power})]
-        # If near goal but bad angle, or not in range: pass to a teammate or advance centrally
-        teammates = [p for p in players if _is_my_team(p, team_id) and _player_idx(p) != my_player_id and _player_idx(p) != 0]
-        if teammates:
-            # Pass to the teammate closest to center and nearest opponent goal
-            best = min(teammates, key=lambda p: abs(p.get("position", {}).get("y", 0)) + abs(p.get("position", {}).get("x", 0) - opp_goal_x) * 0.5)
-            return [_cmd("PASS", my_player_id, team_id,
-                         {"target_player_id": _player_idx(best), "type": "GROUND"})]
         return [_cmd("MOVE_TO", my_player_id, team_id,
                      {"target_x": opp_goal_x * cfg.advance_x_factor,
-                      "target_y": 0, "sprint": cfg.advance_sprint})]
+                      "target_y": cfg.advance_y, "sprint": cfg.advance_sprint})]
 
     # Shouldn't reach here
     return [_cmd("SET_STANCE", my_player_id, team_id, {"stance": 0})]

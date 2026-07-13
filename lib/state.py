@@ -65,31 +65,6 @@ def dist(pos1: dict, pos2: dict) -> float:
     )
 
 
-def resolve_holder(ball: dict, players: list):
-    """Return the player dict that holds the ball, or None."""
-    poss_idx = _possession_idx(ball)
-    if poss_idx is None:
-        return None
-    return next((p for p in players if _player_idx(p) == poss_idx), None)
-
-
-def count_opponents_in_our_half(players: list, team_id: int) -> int:
-    """Count opponents in our defensive half."""
-    my_goal_x, _ = get_goal_positions(team_id)
-    count = 0
-    for p in players:
-        if _is_my_team(p, team_id):
-            continue
-        pos = p.get("position", {})
-        if my_goal_x < 0:  # HOME: our half is x < 0
-            if pos.get("x", 0) < 0:
-                count += 1
-        else:  # AWAY: our half is x > 0
-            if pos.get("x", 0) > 0:
-                count += 1
-    return count
-
-
 def summarize_state(
     game_state: dict,
     team_id: int,
@@ -164,23 +139,5 @@ def summarize_state(
         d_goal = abs(pos.get("x", 0) - my_goal_x)
         d_me = dist(pos, me.get("position", {})) if me else 0
         lines.append(f"  P{pid}: ({pos.get('x',0):.1f},{pos.get('y',0):.1f}) distToMyGoal={d_goal:.1f} distToMe={d_me:.1f}")
-
-    # Time remaining (match is 300s)
-    time_remaining = max(0, 300 - game_time)
-    if time_remaining < 60:
-        lines.append(f"\n⚠️ TIME CRITICAL: {time_remaining:.0f}s remaining!")
-    else:
-        lines.append(f"\nTime remaining: {time_remaining:.0f}s")
-
-    # Coach instructions (teamChat) — real-time messages from the human coach
-    team_chat = game_state.get("teamChat", [])
-    if team_chat:
-        lines.append("")
-        lines.append("🗣️ COACH SAYS:")
-        for msg in team_chat[-3:]:  # Show last 3 messages max
-            if isinstance(msg, dict):
-                lines.append(f"  \"{msg.get('message', msg.get('content', str(msg)))}\"")
-            elif isinstance(msg, str):
-                lines.append(f"  \"{msg}\"")
 
     return "\n".join(lines)

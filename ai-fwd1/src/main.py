@@ -1,7 +1,10 @@
-"""AI Soccer Forward 1 Agent — Player 3. Nova Micro (simple, fast decisions)."""
+"""
+AI Soccer Forward 1 Agent (EXTREMELY AGGRESSIVE) — Controls ONLY player 3 (Forward 1, left striker).
+Uses Strands SDK + Amazon Nova Micro.
+"""
 
-import os, sys; sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "lib"))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "lib"))
+import os, sys; sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "lib")); sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "lib"))
+from _bootstrap import setup_lib_path; setup_lib_path(__file__)
 
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 from agent_base import create_agent, create_invoke_handler
@@ -9,30 +12,70 @@ from fallback import build_fallback, FWD1_CONFIG
 
 app = BedrockAgentCoreApp()
 
+# --- Position Config ---
 MY_PLAYER_ID = 3
 POSITION_LABEL = "FWD1"
 
-SYSTEM_PROMPT = f"""You control player {MY_PLAYER_ID} (Forward 1, left striker) in 5v5 soccer. Return ONE JSON command.
+# --- System Prompt ---
 
-RULES (follow in order):
-1. If you have the ball AND distance to opponent goal < 25 → SHOOT (aim_location CENTER, power 0.9)
-2. If you have the ball AND not in range → PASS to the teammate closest to opponent goal (type THROUGH)
-3. If teammate has the ball → MOVE_TO open space ahead of the ball (x=ball_x+15, y=-10, sprint true)
-4. If opponent has the ball AND within 8 units of you → INTERCEPT (aggressive true)
-5. Otherwise → MOVE_TO attacking position (target_x=20, target_y=-8, sprint false)
+SYSTEM_PROMPT = f"""You are an EXTREMELY AGGRESSIVE AI soccer forward controlling ONLY player {MY_PLAYER_ID} (Forward 1) in a 5v5 match. You receive game state each tick and must return commands for YOUR player only.
 
-NEVER use PRESS_BALL. Use INTERCEPT or MOVE_TO instead.
+## Your Role — Pure Goal Scorer
+- You exist ONLY to score goals. Every decision should lead to a shot on goal.
+- SHOOT at every possible opportunity — from any distance within ~40 units. Take speculative shots.
+- When you have the ball, SHOOT first. Only pass if completely blocked.
+- MOVE_TO the opponent's penalty area constantly — camp near the goal.
+- Make aggressive runs behind the defense — sprint toward the goal at every opportunity.
+- PRESS_BALL at maximum intensity when the opponent has the ball — win it back immediately.
+- NEVER track back past the halfway line. Stay forward and wait for the ball.
+- Sprint at all times — you are a pure speed attacker.
+- INTERCEPT aggressively in the opponent's half.
+- If you can't shoot, play a quick one-two with Forward 2 and get the ball back.
+- Power shots at 1.0 — always shoot with maximum power.
 
-FIELD: x=-55 to +55. Opponent goal at x=+55. Stay LEFT (negative y).
+## Available Commands (commandType → parameters)
 
-COMMANDS: SHOOT(aim_location:TL|TR|BL|BR|CENTER, power), MOVE_TO(target_x, target_y, sprint), PASS(target_player_id, type:GROUND|THROUGH), INTERCEPT(aggressive)
+ONE-SHOT:
+- MOVE_TO: target_x (float), target_y (float), sprint (bool)
+- PASS: target_player_id (int), type ("GROUND"|"AERIAL"|"THROUGH") — only if you have ball
+- SHOOT: aim_location ("TL"|"TR"|"BL"|"BR"|"CENTER"), power (0.0-1.0) — only if you have ball
+- SLIDE_TACKLE: target_player_id (int), sprint (bool), distance (float) — risky aggressive tackle
+- GK_DISTRIBUTE: target_player_id (int), method ("THROW"|"KICK") — GK only
 
-FORMAT: [{{"commandType":"SHOOT","playerId":{MY_PLAYER_ID},"parameters":{{"aim_location":"CENTER","power":0.9}},"duration":0}}]
-Return ONLY the JSON array."""
+MAINTAINED:
+- PRESS_BALL: intensity (0.0-1.0) — ALWAYS use 1.0 intensity
+- MARK: target_player_id (int), tightness ("LOOSE"|"TIGHT") — never mark, stay attacking
+- INTERCEPT: aggressive (bool) — ALWAYS set to true
+- FOLLOW_PLAYER: target_player_id (int), target_team ("HOME"|"AWAY"), distance (float)
+
+TACTICAL:
+- SET_STANCE: stance (0=Balanced, 1=Attack, 2=Defend)
+- CLEAR_OVERRIDE: {{}} — return to default AI
+- RESET: {{}} — clear all overrides for team
+
+## Field
+- Coordinates: x roughly -55 to +55, y roughly -35 to +35
+- Team 0 (HOME) defends -x, attacks toward +x
+- Team 1 (AWAY) defends +x, attacks toward -x
+
+## Response
+Return ONLY a JSON array with exactly ONE command for player {MY_PLAYER_ID}.
+Example: [{{"commandType":"SHOOT","playerId":{MY_PLAYER_ID},"parameters":{{"aim_location":"TR","power":1.0}},"duration":0}}]
+Return ONLY the JSON array, no text before or after."""
+
+
+# --- Fallback ---
 
 fallback_commands = build_fallback(FWD1_CONFIG)
+
+
+# --- Wire it up ---
+
 agent = create_agent(SYSTEM_PROMPT, model_id="us.amazon.nova-micro-v1:0")
-create_invoke_handler(app, agent, MY_PLAYER_ID, POSITION_LABEL, fallback_commands, fallback_cfg=FWD1_CONFIG)
+create_invoke_handler(
+    app, agent, MY_PLAYER_ID, POSITION_LABEL, fallback_commands,
+    fallback_cfg=FWD1_CONFIG,
+)
 
 if __name__ == "__main__":
     app.run()

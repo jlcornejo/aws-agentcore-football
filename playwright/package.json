@@ -1,0 +1,14 @@
+{
+  "name": "aws-football-cup-playwright",
+  "version": "1.0.0",
+  "description": "Playwright automation para login al AWS Workshop Event Dashboard",
+  "scripts": {
+    "test": "npx playwright test",
+    "login": "npx playwright test tests/workshop-login.spec.ts",
+    "login:headed": "npx playwright test tests/workshop-login.spec.ts --headed",
+    "codegen": "npx playwright codegen https://catalog.us-east-1.prod.workshops.aws/event/dashboard/en-US/workshop/7-deploy-your-team"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.50.1"
+  }
+}

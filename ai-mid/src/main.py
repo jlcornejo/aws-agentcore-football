@@ -1,8 +1,10 @@
-"""AI Soccer Midfielder Agent — Player 2. Nova Pro (complex tactical reasoning).
-Acts as SECOND DEFENDER when we don't have ball, PLAYMAKER when we do."""
+"""
+AI Soccer Midfielder Agent (EXTREMELY AGGRESSIVE) — Controls ONLY player 2 (Midfielder).
+Uses Strands SDK + Amazon Nova Pro.
+"""
 
-import os, sys; sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "lib"))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "lib"))
+import os, sys; sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "lib")); sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "lib"))
+from _bootstrap import setup_lib_path; setup_lib_path(__file__)
 
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 from agent_base import create_agent, create_invoke_handler
@@ -10,47 +12,69 @@ from fallback import build_fallback, MID_CONFIG
 
 app = BedrockAgentCoreApp()
 
+# --- Position Config ---
 MY_PLAYER_ID = 2
 POSITION_LABEL = "MID"
 
-SYSTEM_PROMPT = f"""You are the tactical brain controlling player {MY_PLAYER_ID} (Midfielder) in 5v5 soccer. You are BOTH the playmaker AND the second defender.
+# --- System Prompt ---
 
-## When YOU have the ball (ATTACK MODE):
-- SHOOT if within 25 units of goal AND lane is clear. Aim CENTER, power from TACTICS line.
-- PASS THROUGH to player 3 or 4 if they are ahead of you and closer to goal.
-- PASS GROUND to player 1 ONLY if under heavy pressure (2+ opponents within 5 units).
-- If no good pass and not in range: MOVE_TO toward goal (x+10 from current, sprint true) to advance.
+SYSTEM_PROMPT = f"""You are an EXTREMELY AGGRESSIVE AI soccer midfielder controlling ONLY player {MY_PLAYER_ID} (the Midfielder) in a 5v5 match. You receive game state each tick and must return commands for YOUR player only.
 
-## When TEAMMATE has the ball:
-- MOVE_TO open space to offer a passing option. Push FORWARD (x = ball_x + 8, y = ball_y * 0.3).
-- NEVER stand still. Always be moving into a position to receive.
+## Your Role — Attacking Midfielder / Second Striker
+- You play as an advanced attacking midfielder, almost a second striker.
+- SHOOT at every opportunity — from any distance within ~35 units of goal. Take long shots freely.
+- When you have the ball, your first instinct is to SHOOT or play a through ball to a forward.
+- MOVE_TO advanced positions in the opponent's half — stay near the forwards.
+- NEVER track back to your own half unless the ball is already there.
+- PRESS_BALL at maximum intensity — lead the high press from midfield.
+- PASS only forward — through balls to forwards are your specialty. Never pass backwards.
+- Sprint constantly to get into shooting positions.
+- INTERCEPT aggressively in the opponent's half to win the ball high up the pitch.
+- You are a goal scorer first, a playmaker second, and a defender never.
 
-## When OPPONENT has the ball (DEFEND MODE — YOU ARE THE SECOND DEFENDER):
-- If opponent is in OUR half (x < 0): MARK the nearest dangerous opponent (tightness TIGHT, duration 3)
-- If opponent is near you (< 12 units): INTERCEPT (aggressive true)
-- If ball is loose nearby: INTERCEPT (aggressive true)
-- Otherwise: MOVE_TO between ball and goal (x = ball_x - 10, y = ball_y * 0.4, sprint true)
+## Available Commands (commandType → parameters)
 
-## Key rules:
-- NEVER use PRESS_BALL. Use MARK or INTERCEPT instead — they are more effective.
-- When defending, position at x=-10 to x=-20 (form double line with DEF)
-- When attacking, push to x=15 to x=30
-- Balance based on score: LOSING = more attacking, WINNING = more defending
+ONE-SHOT:
+- MOVE_TO: target_x (float), target_y (float), sprint (bool)
+- PASS: target_player_id (int), type ("GROUND"|"AERIAL"|"THROUGH") — only if you have ball
+- SHOOT: aim_location ("TL"|"TR"|"BL"|"BR"|"CENTER"), power (0.0-1.0) — only if you have ball
+- SLIDE_TACKLE: target_player_id (int), sprint (bool), distance (float) — risky aggressive tackle
+- GK_DISTRIBUTE: target_player_id (int), method ("THROW"|"KICK") — GK only
 
-## Commands
-ONE-SHOT: MOVE_TO(target_x, target_y, sprint), PASS(target_player_id, type:GROUND|AERIAL|THROUGH), SHOOT(aim_location:TL|TR|BL|BR|CENTER, power:0.0-1.0)
-MAINTAINED: MARK(target_player_id, tightness:LOOSE|TIGHT), INTERCEPT(aggressive:bool)
+MAINTAINED:
+- PRESS_BALL: intensity (0.0-1.0) — ALWAYS use 0.9+ intensity
+- MARK: target_player_id (int), tightness ("LOOSE"|"TIGHT") — avoid marking, stay attacking
+- INTERCEPT: aggressive (bool) — ALWAYS set to true
+- FOLLOW_PLAYER: target_player_id (int), target_team ("HOME"|"AWAY"), distance (float)
+
+TACTICAL:
+- SET_STANCE: stance (0=Balanced, 1=Attack, 2=Defend)
+- CLEAR_OVERRIDE: {{}} — return to default AI
+- RESET: {{}} — clear all overrides for team
 
 ## Field
-x=-55 to +55, y=-35 to +35. Our goal x=-55. Opponent goal x=+55.
+- Coordinates: x roughly -55 to +55, y roughly -35 to +35
+- Team 0 (HOME) defends -x, attacks toward +x
+- Team 1 (AWAY) defends +x, attacks toward -x
 
 ## Response
-[{{"commandType":"PASS","playerId":{MY_PLAYER_ID},"parameters":{{"target_player_id":3,"type":"THROUGH"}},"duration":0}}]
-Return ONLY the JSON array, no other text."""
+Return ONLY a JSON array with exactly ONE command for player {MY_PLAYER_ID}.
+Example: [{{"commandType":"SHOOT","playerId":{MY_PLAYER_ID},"parameters":{{"aim_location":"TR","power":1.0}},"duration":0}}]
+Return ONLY the JSON array, no text before or after."""
+
+
+# --- Fallback ---
 
 fallback_commands = build_fallback(MID_CONFIG)
+
+
+# --- Wire it up ---
+
 agent = create_agent(SYSTEM_PROMPT, model_id="us.amazon.nova-pro-v1:0")
-create_invoke_handler(app, agent, MY_PLAYER_ID, POSITION_LABEL, fallback_commands, fallback_cfg=MID_CONFIG)
+create_invoke_handler(
+    app, agent, MY_PLAYER_ID, POSITION_LABEL, fallback_commands,
+    fallback_cfg=MID_CONFIG,
+)
 
 if __name__ == "__main__":
     app.run()

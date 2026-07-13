@@ -1,13 +1,4 @@
-"""Base agent factory for AI soccer position agents.
-
-Pipeline per tick:
-  1. state.py summarizes game state
-  2. tactics.py computes tactical analysis (shot lanes, pass options, open space)
-  3. LLM decides based on state + tactics
-  4. parsing.py validates JSON output
-  5. overrides.py corrects critical mistakes
-  6. fallback.py catches failures
-"""
+"""Base agent factory for AI soccer position agents."""
 
 import json
 from typing import Callable
@@ -16,15 +7,12 @@ from strands.models import BedrockModel
 
 from parsing import parse_commands
 from state import summarize_state
-from tactics import tactics_report
-from overrides import apply_overrides
 from fallback import FallbackConfig, build_last_resort
-from pattern_tracker import PatternTracker
 
 
 def create_agent(system_prompt: str, model_id: str = "us.amazon.nova-micro-v1:0") -> Agent:
     """Create a Strands Agent with the given system prompt."""
-    model = BedrockModel(model_id=model_id, max_tokens=200, temperature=0.2)
+    model = BedrockModel(model_id=model_id)
     return Agent(model=model, system_prompt=system_prompt)
 
 
@@ -38,12 +26,13 @@ def create_invoke_handler(
 ):
     """Create and register the @app.entrypoint invoke handler.
 
-    Pipeline: state summary + tactics → LLM → parse → overrides → output
-    Four degradation layers: LLM → parse-fallback → error-fallback → last-resort
+    Three layers of error handling, from best to worst:
+      1. LLM response → parse into commands
+      2. fallback_fn(game_state, team_id, my_player_id) → rule-based commands
+      3. last-resort command from fallback_cfg → single safe command
     """
     log = app.logger
     last_resort = build_last_resort(fallback_cfg, my_player_id)
-    tracker = PatternTracker()  # In-process memory — survives across ticks
 
     @app.entrypoint
     async def invoke(payload, context):
@@ -54,50 +43,28 @@ def create_invoke_handler(
             game_state = prompt_data.get("gameState", {})
             team_id = prompt_data.get("teamId", 0)
 
+            # Honor myPlayers from payload if present, otherwise use configured player ID
             my_players = prompt_data.get("myPlayers", [my_player_id])
             effective_pid = my_players[0] if my_players else my_player_id
 
-            # Step 1: Summarize state
             state_summary = summarize_state(
                 game_state, team_id, effective_pid, position_label
             )
+            log.info(f"{position_label} agent invoked for team {team_id}, controlling player {effective_pid}")
 
-            # Step 2: Compute tactics and append to prompt
-            tactics = tactics_report(game_state, team_id, effective_pid, position_label)
-
-            # Step 3: Pattern tracking (in-process memory)
-            tracker.update(game_state, team_id)
-            scouting = tracker.report(game_state, team_id, position_label)
-
-            full_prompt = state_summary + tactics + scouting
-
-            log.info(f"{position_label} agent invoked for team {team_id}, player {effective_pid}")
-
-            # Step 3: LLM decides
-            response = agent(full_prompt)
+            response = agent(state_summary)
             response_text = str(response)
 
-            # Step 4: Parse JSON
             commands = parse_commands(response_text, team_id, effective_pid)
 
             if commands:
-                # Step 5: Apply overrides
-                commands, override_tag = apply_overrides(
-                    commands, game_state, team_id, effective_pid, position_label
-                )
-                if override_tag:
-                    log.info(f"Override [{override_tag}]: {[c.get('commandType') for c in commands]}")
-                else:
-                    log.info(f"LLM: {[c.get('commandType') for c in commands]}")
+                log.info(f"LLM returned {len(commands)} commands: "
+                         f"{[c.get('commandType') for c in commands]}")
                 yield json.dumps(commands)
             else:
                 log.warn(f"LLM parse failed, using fallback. Response: {response_text[:200]}")
                 commands = fallback_fn(game_state, team_id, effective_pid)
-                # Apply overrides even to fallback commands
-                commands, override_tag = apply_overrides(
-                    commands, game_state, team_id, effective_pid, position_label
-                )
-                log.info(f"Fallback{' ['+override_tag+']' if override_tag else ''}: {[c.get('commandType') for c in commands]}")
+                log.info(f"Fallback returned {len(commands)} commands")
                 yield json.dumps(commands)
 
         except Exception as e:
@@ -115,7 +82,7 @@ def create_invoke_handler(
                 yield json.dumps(commands)
             except Exception:
                 cmd = dict(last_resort)
-                cmd["teamId"] = 0
+                cmd["teamId"] = 0  # best guess when payload parsing also failed
                 yield json.dumps([cmd])
 
     return invoke
