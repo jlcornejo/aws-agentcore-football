@@ -1,6 +1,7 @@
 """AI Soccer Goalkeeper Agent — Player 0. Nova Micro (simple, fast decisions)."""
 
-import os, sys; sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "lib"))
+import os, sys; sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "lib"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "lib"))
 
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 from agent_base import create_agent, create_invoke_handler

@@ -34,3 +34,4 @@ _chinese_team/
 .DS_Store
 *.log
 sessions/
+.env
